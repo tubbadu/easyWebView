@@ -6,217 +6,304 @@
  *   SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-import QtQuick 2.0
+import QtQuick 2.7
+import QtQuick.Controls 2.0
 import QtWebEngine 1.5
 import QtQuick.Layouts 1.1
 import org.kde.plasma.components 2.0 as PlasmaComponents // for Menu+MenuItem
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.extras 2.0 as PlasmaExtras
+import org.kde.plasma.plasmoid 2.0
 
-ColumnLayout {
-    /*RowLayout{
-        Layout.fillWidth: true
-        PlasmaComponents3.Button {
-            icon.name: "go-previous"
-            onClicked: webview.goBack()
-            enabled: webview.canGoBack
-        }
-        PlasmaComponents3.Button {
-            icon.name: "go-next"
-            onClicked: webview.goForward()
-            enabled: webview.canGoForward
-        }
-        PlasmaComponents3.TextField {
-            Layout.fillWidth: true
-            onAccepted: {
-                var url = text;
-                if (url.indexOf(":/") < 0) {
-                    url = "http://" + url;
-                }
-                webview.url = url;
-            }
-            onActiveFocusChanged: {
-                if (activeFocus) {
-                    selectAll();
-                }
-            }
+//to be removed
+import QtAudioEngine 1.15
 
-            text: webview.url
-        }
+//import QtQuick.Controls 2.12 as QQC2
 
-        // this shows page-related information such as blocked popups
-        PlasmaComponents3.ToolButton {
-            id: infoButton
 
-            // callback invoked when button is clicked
-            property var cb
+Item {
+	id: root
+	property string filePath: Plasmoid.configuration.filePath
+	property string fullHeight: Plasmoid.configuration.fullHeight
+	property string fullWidth: Plasmoid.configuration.fullWidth
+	property string textColor: Plasmoid.configuration.textColor
+	property string textBackground: Plasmoid.configuration.textBackground
+	property string textSelectionBackground: Plasmoid.configuration.textSelectionBackground
 
-            // button itself adds sufficient visual padding
-            Layout.leftMargin: -parent.spacing
-            Layout.rightMargin: -parent.spacing
+	Component.onCompleted: {
+		//onStartup();
+		openMarkdown()
+		plasmoid.addEventListener('ConfigChanged', configChanged);
+	}
+	/*focus: plasmoid.expanded
+	onFocusChanged: {
 
-            onClicked: cb();
+		lView.currentItem.setText("diocan")
+	}*/
+	
+	function configChanged(){ // dont know if useful or not
+		root.filePath = plasmoid.readConfig("filePath");
+		root.fullHeight = plasmoid.readConfig("fullHeight");
+		root.fullWidth = plasmoid.readConfig("fullWidth");
+		root.textColor = plasmoid.readConfig("textColor");
+		root.textBackground = plasmoid.readConfig("textBackground");
+		root.textSelectionBackground = plasmoid.readConfig("textSelectionBackground");
+	}
 
-            PlasmaComponents3.ToolTip {
-                id: tooltip
-            }
+	function openFile(fileUrl) {
+		var request = new XMLHttpRequest();
+		request.open("GET", fileUrl, false);
+		request.send(null);
+		return request.responseText;
+	}
 
-            function show(text, icon, tooltipText, cb) {
-                infoButton.text = text;
-                infoButton.icon.name = icon;
-                tooltip.text = tooltipText;
-                infoButton.cb = cb;
-                infoButton.visible = true;
-            }
+	function saveFile(fileUrl, text) {
+		var request = new XMLHttpRequest();
+		request.open("PUT", fileUrl, false);
+		request.send(text);
+		return request.status;
+	}
 
-            function dismiss() {
-                infoButton.visible = false;
-            }
-        }
+	function exportMarkdown(){
+		let doc = ""
+		for(let i=0; i<lView.model.count; i++){
+			doc = doc + lView.itemAtIndex(i).getText()+ "\n"
+		}
+		saveFile("/home/tubbadu/prova.md", doc)
+	}
 
-        PlasmaComponents3.Button {
-            icon.name: webview.loading ? "process-stop" : "view-refresh"
-            onClicked: webview.loading ? webview.stop() : webview.reload()
-        }
-    }*/
+	function openMarkdown(){
+		lModel.clear()
+		let doc = openFile("/home/tubbadu/prova.md").split("\n")
+		for (let i=0; i<doc.length; i++){
+			lView.addBlock(-1, doc[i])
+		}
+	}
+	
+	Layout.preferredWidth: fullWidth
+	Layout.preferredHeight: fullHeight
+	Rectangle {
+		anchors.fill: parent
+		color: textBackground
+		ColumnLayout{
+			id: colLay
+			spacing: 10
+			anchors.fill: parent
 
-    Item {
-        Layout.fillWidth: true
-        Layout.fillHeight: true
+			Button {
+				id: butt
+				visible: false
+				text: "aa"
+				anchors.right: parent.right
+				onClicked: text = "lModel.get(i).text"//exportMarkdown() //lView.addBlock(0)
+			}
 
-        // TODO use contentsSize but that crashes, now mostly for some sane initial size
-        Layout.preferredWidth: 600//PlasmaCore.Units.gridUnit * 36
-        Layout.preferredHeight: 600//PlasmaCore.Units.gridUnit * 18
+			Text {
+				id: hiddenMarkdownRender
+				visible: false
+				font.pixelSize: 18 // add in config TODO
+				textFormat: TextEdit.MarkdownText
+				text: "a"
+			}
 
-        // Binding it to e.g. width will be super slow on resizing
-        Timer {
-            id: updateZoomTimer
-            interval: 100
+			ListModel{
+				id: lModel
+			}
 
-            readonly property int minViewWidth: plasmoid.configuration.minViewWidth
-            readonly property bool useMinViewWidth: plasmoid.configuration.useMinViewWidth
-            readonly property int constantZoomFactor: plasmoid.configuration.constantZoomFactor
-            readonly property string startingUrl: plasmoid.configuration.startingUrl
+			Component {
+				id: block
+				Rectangle {
+					default property alias data: col.data
+					implicitWidth: colLay.width 
+					implicitHeight: col.implicitHeight
+					color: (tEdit.focus ? textSelectionBackground : textBackground) // change colors
+					property string formatted
+					onFocusChanged: {
+						tEdit.focus = true
+					}
 
-            onTriggered: {
-                var newZoom = 1;
-                if (useMinViewWidth) {
-                    // Try to fit contents for a smaller screen
-                    newZoom = Math.min(1, webview.width / minViewWidth);
-                    // make sure value is valid
-                    newZoom = Math.max(0.25, newZoom);
-                } else {
-                    newZoom = constantZoomFactor / 100.0;
-                }
-                webview.zoomFactor = newZoom;
-                // setting the zoom factor does not always work on the first try; also, numbers get rounded
-                if (Math.round(1000 * webview.zoomFactor) != Math.round(1000 * newZoom)) {
-                    updateZoomTimer.restart();
-                }
-            }
-        }
+					function setAsCurrentItem(){
+						lView.currentIndex = index
+					}
+					function setFocused(){
+						tEdit.focus = true
+					}
+					function addText(txt){
+						tEdit.text = tEdit.text + txt
+					}
+					function setCursorPosition(pos){
+						tEdit.cursorPosition = pos
+					}
+					function getText(){
+						return tEdit.text
+					}
+					function getLength(){
+						return tEdit.length
+					}
+					function deleteCurrentItemAndMoveUp(){
+						if (index > 0){
+							lView.decrementCurrentIndex()
+							let setIndex = lView.currentItem.getLength()
+							lView.currentItem.addText(tEdit.text)
+							lView.currentItem.setCursorPosition(setIndex)
+							lModel.remove(index)
+						} else {
+							// is the first block, do nothing
+						}
+					}
 
-        // This reimplements WebEngineView context menu for links to add a "open externally" entry
-        // since you cannot add custom items there yet
-        // there's a FIXME comment about that in QQuickWebEngineViewPrivate::contextMenuRequested
-        PlasmaComponents.Menu {
-            id: linkContextMenu
-            visualParent: webview
+					function deleteNextItemAndMoveUp(){ // TODO move cursor
+						/* 
+						* check if item is last
+						* if last, do nothing
+						* otherwise, delete next item and copy it's text to this
+						*/
 
-            property string link
+						if (index < lModel.count-1){
+							let setIndex = tEdit.cursorPosition
+							tEdit.text = tEdit.text + lView.itemAtIndex(index+1).getText()
+							tEdit.cursorPosition = setIndex
+							lModel.remove(index+1)
+						} else {
+							// is the last block, do nothing
+						}
+					}
+					Column {
+						id: col
+						anchors.fill: parent
+						spacing: 20
+						
+						TextEdit {
+							id: tEdit
+							property string ssetText: setText
+							width: parent.width
+							text: setText
+							font.pixelSize: (hiddenMarkdownRender.height / tView.lineCount) * 0.75
+							color: textColor
+							wrapMode: TextEdit.Wrap
 
-            PlasmaComponents.MenuItem {
-                text: i18nc("@action:inmenu", "Open Link in Browser")
-                icon:  "internet-web-browser"
-                onClicked: Qt.openUrlExternally(linkContextMenu.link)
-            }
+							onFocusChanged: {
+								tView.visible = !focus
+								visible = focus
+								formatted = text
+								if (focus) {
+									hiddenMarkdownRender.text = formatted
+									setAsCurrentItem()
+								}
+							}
 
-            PlasmaComponents.MenuItem {
-                text: i18nc("@action:inmenu", "Copy Link Address")
-                icon: "edit-copy"
-                onClicked: webview.triggerWebAction(WebEngineView.CopyLinkToClipboard)
-            }
-        }
+							Component.onCompleted:{
+								focus = true
+							}
+							onEditingFinished: {
+								// perde fuoco
+								exportMarkdown()
+							}
 
-        WebEngineView {
-            id: webview
-            anchors.fill: parent
-            onUrlChanged: plasmoid.configuration.url = url;
-            Component.onCompleted: url = plasmoid.configuration.startingUrl;
+							Keys.onReturnPressed: {
+								if (lView.currentIndex + 1 < lView.model.count){
+									lView.addBlock(lView.currentIndex + 1)
+								} else {
+									lView.addBlock(-1)
+								}
+							}
 
-            readonly property bool useMinViewWidth : plasmoid.configuration.useMinViewWidth
+							Keys.onPressed: {
+								let delKey = 16777219
+								let cancKey = 16777223
+								let tabKey = 16777217
+								let shiftTabKey = 16777218
+								let escKey = 16777216
 
-            Connections {
-                target: plasmoid.configuration
-                
-                function onMinViewWidthChanged() {updateZoomTimer.start()}
+								//butt.text = event.key
+								if (event.key == delKey){
+									if(cursorPosition == 0){
+										event.accepted = true;
+										deleteCurrentItemAndMoveUp()
+									}
+								} else if (event.key == cancKey){
+									if(cursorPosition == length){
+										event.accepted = true;
+										deleteNextItemAndMoveUp()
+									}
+								} else if (event.key == tabKey){
+									openMarkdown()
+								} else if (event.key == shiftTabKey){
 
-                function onUseMinViewWidthChanged() {updateZoomTimer.start()}
+								} else if (event.key == escKey){
+									focus = false
+								}
+							}
 
-                function onConstantZoomFactorChanged() {updateZoomTimer.start()}
+							Timer {
+								interval: 100
+								running: tEdit.focus && plasmoid.expanded
+								repeat: true
+								onTriggered: {
+									formatted=tEdit.text
+									hiddenMarkdownRender.text = formatted
+									saveFile("/home/tubbadu/log.txt", Date().toString())
+									lView.focus = true
+								}
+							}
+						}
 
-                function onUseConstantZoomChanged() {updateZoomTimer.start()}
+						Text {
+							id: tView
+							font.pixelSize: hiddenMarkdownRender.font.pixelSize
+							textFormat: TextEdit.MarkdownText
+							text: formatted
+							width: parent.width
+							wrapMode: TextEdit.Wrap
+							color: textColor
 
-                function onStartingUrlChanged() {updateZoomTimer.start()}
-            }
+							function clicked(){
+								tEdit.focus = true
+							}
 
-            onLinkHovered: {
-                if (hoveredUrl.toString() !== "") {
-                    mouseArea.cursorShape = Qt.PointingHandCursor;
-                } else {
-                    mouseArea.cursorShape = Qt.ArrowCursor;
-                }
-            }
+							MouseArea {
+								anchors.fill: parent
+								onClicked: {
+									tView.clicked()
+								}
+							}
+						}
+					}
+				}
+			}
 
-            onWidthChanged: {
-                if (useMinViewWidth) {
-                    updateZoomTimer.start()
-                }
-            }
+			ListView{
+				id: lView
+				anchors.fill: parent
+				model: lModel
+				delegate: block
+				snapMode: ListView.NoSnap
+				focus:  true
+				ScrollBar.vertical: ScrollBar {
+					active: true
+				}
+				property int n: 0
 
-            onLoadingChanged: {
-                if (loadRequest.status === WebEngineLoadRequest.LoadStartedStatus) {
-                    infoButton.dismiss();
-                } else if (loadRequest.status === WebEngineLoadRequest.LoadSucceededStatus && useMinViewWidth) {
-                    updateZoomTimer.start();
-                }
-            }
+				
+				function addBlock(index, txt=""){
+					let prop = {"setText": txt, "setMarkdown": "# markdown `prova` " + n, "setFocused": true}
+					if(index == -1) {
+						model.append(prop)
+					}
+					model.insert(index, prop)
+					incrementCurrentIndex()
+					let setIndex = currentItem.getLength()
+					currentItem.setCursorPosition(setIndex)
+					n=n+1
+				}
 
-            onContextMenuRequested: {
-                if (request.mediaType === ContextMenuRequest.MediaTypeNone && request.linkUrl.toString() !== "") {
-                    linkContextMenu.link = request.linkUrl;
-                    linkContextMenu.open(request.x, request.y);
-                    request.accepted = true;
-                }
-            }
-
-            onNewViewRequested: {
-                var url = request.requestedUrl;
-
-                if (request.userInitiated) {
-                    Qt.openUrlExternally(url);
-                } else {
-                    infoButton.show(i18nc("An unwanted popup was blocked", "Popup blocked"), "document-close",
-                                    i18n("Click here to open the following blocked popup:\n%1", url), function () {
-                        Qt.openUrlExternally(url);
-                        infoButton.dismiss();
-                    });
-                }
-            }
-        }
-
-        MouseArea {
-            id: mouseArea
-            anchors.fill: parent
-            acceptedButtons: Qt.BackButton | Qt.ForwardButton
-            onPressed: {
-                if (mouse.button === Qt.BackButton) {
-                    webview.goBack();
-                } else if (mouse.button === Qt.ForwardButton) {
-                    webview.goForward();
-                }
-            }
-        }
-    }
+				Component.onCompleted: {
+					if (lView.model.count == 0) {
+						lView.addBlock(0)
+					}
+				}
+			}
+		}
+	}
 }

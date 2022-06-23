@@ -6,20 +6,23 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <entry name="url" type="String">
-        <default>https://www.kde.org/</default>
+    <entry name="filePath" type="String">
+        <default>/home/tubbadu/.local/share/plasma/plasmoids/com.github.QtNotes/README.md</default>
     </entry>
-    <entry name="useMinViewWidth" type="Bool">
-      <default>true</default>
+    <entry name="fullHeight" type="Int">
+      <default>600</default>
     </entry>
-    <entry name="minViewWidth" type="Int">
-      <default>700</default>
+    <entry name="fullWidth" type="Int">
+      <default>600</default>
     </entry>
-    <entry name="constantZoomFactor" type="Int">
-      <default>100</default>
+    <entry name="textColor" type="String">
+      <default>#FFFFFF</default>
     </entry>
-    <entry name="startingUrl" type="String">
-      <default>https://www.kde.org/</default>
+    <entry name="textBackground" type="String">
+      <default>#000000</default>
+    </entry>
+    <entry name="textSelectionBackground" type="String">
+      <default>#000000</default>
     </entry>
   </group>
 </kcfg>

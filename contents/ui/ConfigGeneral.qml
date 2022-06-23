@@ -1,97 +1,126 @@
-import QtQuick 2.5
-import QtQuick.Layouts 1.3
-import QtQuick.Controls 2.12 as QQC2
-
-import org.kde.kirigami 2.8 as Kirigami
-import org.kde.plasma.core 2.0 as PlasmaCore
+import QtQuick 2.0
+import QtQuick.Controls 2.5
+import QtQuick.Layouts 1.12
+import org.kde.kirigami 2.4 as Kirigami
 
 Kirigami.FormLayout {
-    anchors.right: parent.right
-    anchors.left: parent.left
+	id: page
 
-    property alias cfg_useMinViewWidth: useMinViewWidth.checked
-    property alias cfg_minViewWidth: minViewWidth.value
-    property alias cfg_constantZoomFactor: constantZoomFactor.value
-    property alias cfg_startingUrl: startingUrl.text
+	property alias cfg_filePath: filePath.text
+	property alias cfg_fullHeight: fullHeight.value
+	property alias cfg_fullWidth: fullWidth.value
+	property alias cfg_textColor: textColor.text
+	property alias cfg_textBackground: textBackground.text
+	property alias cfg_textSelectionBackground: textSelectionBackground.text
 
-    QQC2.ButtonGroup { id: zoomGroup }
-
-    RowLayout {
-        Kirigami.FormData.label: i18nc("@title:group", "Content scaling:")
-
-        QQC2.RadioButton {
-            id: useConstantZoom
-            text: i18nc("@option:radio", "Fixed scale:")
-
-            QQC2.ButtonGroup.group: zoomGroup
-
-            onClicked: {
-                constantZoomFactor.forceActiveFocus();
-            }
-        }
-
-        QQC2.SpinBox {
-            id: constantZoomFactor
-            editable: true
-            enabled: useConstantZoom.checked
-
-            validator: RegExpValidator {
-                regExp: new RegExp("[0-9]?[0-9]{2}[ ]?%");
-            }
-
-            textFromValue: function(value) {
-                return value+"%";
-            }
-
-            valueFromText: function(text) {
-                return text.split(" ")[0].split("%")[0];
-            }
-
-            from: 25
-            to: 500
-        }
-    }
-
-    RowLayout {
-        QQC2.RadioButton {
-            id: useMinViewWidth
-            text: i18nc("@option:radio", "Automatic scaling if width is below")
-
-            QQC2.ButtonGroup.group: zoomGroup
-
-            onClicked: {
-                minViewWidth.forceActiveFocus();
-            }
-        }
-
-        QQC2.SpinBox {
-            id: minViewWidth
-            editable: true
-            enabled: useMinViewWidth.checked
-
-            validator: RegExpValidator {
-                regExp: new RegExp("[0-9]?[0-9]{3}[ ]?px");
-            }
-
-            textFromValue: function(value) {
-                return value+"px";
-            }
-
-            valueFromText: function(text) {
-                return text.split(" ")[0].split("px")[0];
-            }
-
-            from: 320
-            to: 3840
-        }
-    }
-
-    RowLayout{
-        Kirigami.FormData.label: i18nc("@title:group", "Starting URL:")
-        QQC2.TextField {
-		    id: startingUrl
-            //editable: true
-            enabled: true
-	    }
-    }
+	RowLayout {
+		id: setSize
+		spacing: 6
+		Label{
+			text: i18n("Height")
+		}
+		SpinBox {
+			id: fullHeight
+			from: 1
+			to: 5000
+		}
+		Label{
+			text: i18n("Width")
+		}
+		SpinBox {
+			id: fullWidth
+			from: 1
+			to: 5000
+		}
+	}
+	TextField {
+		id: filePath
+		Kirigami.FormData.label: i18n("markdown file path:")
+	}
+	TextField {
+		id: textColor
+		Kirigami.FormData.label: i18n("Text color:")
+	}
+	TextField {
+		id: textBackground
+		Kirigami.FormData.label: i18n("Text background color:")
+	}
+	TextField {
+		id: textSelectionBackground
+		Kirigami.FormData.label: i18n("Text selection background color:")
+	}
+	
 }
+
+
+
+/*
+
+
+property alias cfg_filePath: filePath.text
+	property alias cfg_fullHeight: fullHeight.value
+	property alias cfg_fullWidth: fullWidth.value
+	property alias cfg_textColor: textColor.text
+	property alias cfg_textBackground: textBackground.text
+	property alias cfg_textSelectionBackground: textSelectionBackground.text
+
+
+
+
+	RowLayout{
+		Kirigami.FormData.label: i18nc("@title:group", "File path:")
+		QQC2.TextField {
+			id: filePath
+			//editable: true
+			enabled: true
+		}
+	}
+
+	RowLayout {
+		Kirigami.FormData.label: i18nc("@title:group", "Height (px):")
+		QQC2.SpinBox {
+			id: fullHeight
+			editable: true
+			enabled: true
+
+			from: 10
+			to: 5000
+		}
+	}
+
+	RowLayout {
+		Kirigami.FormData.label: i18nc("@title:group", "Width (px):")
+		QQC2.SpinBox {
+			id: fullWidth
+			editable: true
+			enabled: true
+
+			from: 10
+			to: 5000
+		}
+	}
+
+	RowLayout {
+		Kirigami.FormData.label: i18nc("@title:group", "Text color:")
+		QQC2.TextInput {
+			id: textColor
+			editable: true
+			enabled: true
+		}
+	}
+	RowLayout {
+		Kirigami.FormData.label: i18nc("@title:group", "Text background:")
+		QQC2.TextInput {
+			id: textBackground
+			editable: true
+			enabled: true
+		}
+	}
+	RowLayout {
+		Kirigami.FormData.label: i18nc("@title:group", "Text selection background:")
+		QQC2.TextInput {
+			id: textSelectionBackground
+			editable: true
+			enabled: true
+		}
+	}*/
